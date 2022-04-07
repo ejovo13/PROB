@@ -1,0 +1,92 @@
+---
+title: "TP d'introduction à R"
+author: Evan Voyles
+date: 02 Avril, 2022
+output:
+    pdf_document:
+        highlight: "zenburn"
+        fig_width: 4
+        fig_height: 3
+
+---
+
+<!-- # Exercice 1 Loi d'une variable aléatoire discrète -->
+$\textbf{Exercice 1 \ \ Loi d'une variable aléatoire discrète.}\\$
+Soit X  ~ $\mathcal{B}$(5, 0.6).
+\begin{enumerate}
+    \item Calculer $\mathbb{P}(X = 0)$ et $\mathbb{P}(X = 1)$ avec R et vérifier par le calcul.
+\end{enumerate}
+
+```{R}
+
+p <- 0.6
+n <- 5
+
+p_x_eq_0 <- dbinom(x = 0, size = n, prob = p)
+p_x_eq_1 <- dbinom(x = 1, size = n, prob = p)
+
+```
+Nous savons que $X = 0$ est le cas si on échoue 5 fois d'affilées. Donc, $\mathbb{P}(X = 0) = (1 - 0.6)^5 = 0.01024$.
+<!-- \item What is happening -->
+<!-- \end{enumerate} -->
+```{R}
+0.4 ^ 5
+```
+ce qui est égal à la valeur stocké dans `p_x_eq_0`:
+```{R}
+p_x_eq_0
+```
+Pour $X = 1$, il s'agit d'une réussite et quatre échecs; $\mathbb{P}(X = 1) = C(5, 1) * (0.4^4)(0.6) = 0.0768$
+```{R}
+choose(n = 5, k = 1) * (0.4 ^ 4) * (0.6)
+```
+ce qui est égal à la valeur stocké dans `p_x_eq_1`.
+```{R}
+p_x_eq_1
+```
+
+```{R, echo, fig.align = "center"}
+library(purrr)
+
+X <- seq(0, 5)
+P_x <- map_dbl(X, dbinom, 5, 0.6) # apply dbinom(x = ?, size = 5, prob = 0.6) to X
+
+names(P_x) <- X # Associate x with P(X = x)
+
+p <- barplot(P_x, col = "#6212bd", beside = TRUE)
+title(ylab = "P(X = x)", xlab = "x")
+```
+
+\begin{itemize}
+    \item[3.] Calculer $\mathbb{P}(X <= 1)$ et $\mathbb{P}(X <= 4)$ avec R.
+\end{itemize}
+```{R, echo=FALSE}
+names(P_x) <- NULL
+```
+
+```{R}
+p <- 0.6
+n <- 5
+
+pbinom(1, size = n, prob = p)
+pbinom(4, size = n, prob = p)
+
+P_x[1] + P_x[2] # P(X = 0) + P(X = 1)
+1 - P_x[6] # 1 - P(X = 5)
+```
+
+\begin{itemize}
+    \item[4.] Représenter le graphe de la fonction de répartition de $X$.
+\end{itemize}
+
+```{R, fig.align = "center"}
+X <- seq(0, 5)
+cdf <- map_dbl(X, pbinom, 5, 0.6) # apply pbinom(x = ?, size = 5, p = 0.6)
+
+cdf
+plot(X, cdf, bty = "n", type = "S", col = "#a830d8", ylab = "P(X <= x)", xlab = "x")
+```
+
+\begin{itemize}
+    \item[5.] Déterminer le réel $$q = \inf\{k, \mathbb{P}(X \leq k) \geq 0.25\}$$
+\end{itemize}
