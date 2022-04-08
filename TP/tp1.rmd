@@ -1,7 +1,7 @@
 ---
 title: "TP d'introduction à R"
 author: Evan Voyles
-date: 02 Avril, 2022
+date: 08 Avril, 2022
 output:
     pdf_document:
         highlight: "zenburn"
@@ -49,7 +49,7 @@ p_x_eq_1
 library(purrr)
 
 X <- seq(0, 5)
-P_x <- map_dbl(X, dbinom, 5, 0.6) # apply dbinom(x = ?, size = 5, prob = 0.6) to X
+P_x <- dbinom(X, 5, 0.6)
 
 names(P_x) <- X # Associate x with P(X = x)
 
@@ -81,7 +81,7 @@ P_x[1] + P_x[2] # P(X = 0) + P(X = 1)
 
 ```{R, fig.align = "center"}
 X <- seq(0, 5)
-cdf <- map_dbl(X, pbinom, 5, 0.6) # apply pbinom(x = ?, size = 5, p = 0.6)
+cdf <- pbinom(X, size = 5, prob = 0.6)
 
 cdf
 plot(X, cdf, bty = "n", type = "S", col = "#a830d8", ylab = "P(X <= x)", xlab = "x")
@@ -90,3 +90,175 @@ plot(X, cdf, bty = "n", type = "S", col = "#a830d8", ylab = "P(X <= x)", xlab = 
 \begin{itemize}
     \item[5.] Déterminer le réel $$q = \inf\{k, \mathbb{P}(X \leq k) \geq 0.25\}$$
 \end{itemize}
+
+```{R}
+pred <- function(k) { pbinom(k, 5, 0.6) >= 0.25 }
+q <- min(keep(X, pred))
+```
+
+On vient de calculer la 0.25 quantile de X pour une loi \textbf{discrète}.
+```{R}
+qbinom(0.25, size = 5, prob = 0.6)
+q
+```
+
+\begin{itemize}
+    \item[6.] Simuler 20 réalisations de $X$.
+\end{itemize}
+
+```{R, fig.align = "center"}
+sim <- rbinom(20, size = 5, prob = 0.6)
+
+df <- tibble(sim)
+
+df |> ggplot(aes(sim)) + geom_histogram() + labs(x = "k")
+```
+
+
+\textbf{Exercice 2 \ \ Loi d'une variable aléatoire continue.}
+\begin{enumerate}
+    \item Soit $U \sim \mathcal{N}(0, 1)$
+    \begin{itemize}
+        \item [(a)] Représenter le graphe de la densité de $U$ entre $-5$ et $5$.
+    \end{itemize}
+\end{enumerate}
+```{R, fig.align = "center"}
+x <- seq(-5, 5, 0.05)
+pdf <- dnorm(x)
+cdf <- pnorm(x)
+
+df <- tibble(x, pdf, cdf)
+df |> ggplot(aes(x, pdf)) + geom_line() + labs(y = "pdf(x)")
+```
+
+\begin{itemize}
+    \item [(b)] Représenter le graphe de la fonction de répartition de $U$.
+\end{itemize}
+
+
+```{R, fig.align = "center"}
+df |> ggplot(aes(x, cdf)) + geom_line() + labs(y = "cdf(x)")
+```
+\begin{itemize}
+    \item [(c)] Retrouver avec R, les valeurs lues en TD dans la table de la loi normale centrée réduite.
+\end{itemize}
+\begin{itemize}
+    \item $\mathbb{P}(U \leq 0.11)$
+\end{itemize}
+```{R}
+pnorm(0.11)
+```
+\begin{itemize}
+    \item $\mathbb{P}(U \leq -0.51)$
+\end{itemize}
+```{R}
+pnorm(-0.51)
+```
+\begin{itemize}
+    \item $\mathbb{P}(0.5 \leq U \leq 1.5)$
+\end{itemize}
+```{R}
+pnorm(1.5) - pnorm(0.5)
+```
+et retrouver les quantiles $q_1, q_2, q_3$ tels que
+\begin{itemize}
+    \item $\mathbb{P}(U \leq q_1) = 0.975$
+\end{itemize}
+```{R}
+qnorm(0.975)
+```
+\begin{itemize}
+    \item $\mathbb{P}(U \leq q_2) = 0.2358$
+\end{itemize}
+```{R}
+qnorm(0.2358)
+```
+\begin{itemize}
+    \item $\mathbb{P}(|U| \leq q_3) = 0.33$
+\end{itemize}
+On cherche donc un intervalle centrée autour de 0 qui contient 33% de la densité de la loi normale.
+$p_{gauche} = \frac{1 - 0.33}{2}$
+```{R}
+p_gauche <- (1 - 0.33) / 2
+q3 <- -qnorm(p_gauche)
+q3
+
+# Ici, on verifie le calcul
+pnorm(q3) - pnorm(-q3)
+```
+\begin{itemize}
+    \item[2.] Soit $X \sim \mathcal{N}(3, (0.2)^2)$
+    \begin{itemize}
+        \item[(a)] Superposer (en rouge) le graphe de la densité de $X$ sur celui de la densité de $U$.
+    \end{itemize}
+\end{itemize}
+```{R, fig.align = "center"}
+library(tidyverse)
+
+x <- seq(-5, 5, 0.05)
+pdf_n01 <- dnorm(x)
+pdf_n304 <- dnorm(x, 3, 0.2)
+
+df <- tibble(x, pdf_n01, pdf_n304)
+df <- df |> pivot_longer(c(pdf_n01, pdf_n304), names_to = "curve", values_to = "pdf")
+
+df |> ggplot(aes(x, pdf)) + geom_line(aes(col = curve)) +
+    scale_color_manual(values = c("black", "red"), labels = c("N", "X")) +
+    labs(col = "Loi")
+```
+\begin{itemize}
+    \item [(b)] Retrouver avec R, $\mathbb{P}(X \leq 3.29)$ et $a$ tel que $\mathbb{P}(X \leq a) = 0.975$
+\end{itemize}
+```{R}
+pnorm(3.29,  mean = 3, sd = 0.2) # P(X <= 3.9)
+qnorm(0.975, mean = 3, sd = 0.2) # a, tq P(X <= a) = 0.975
+```
+
+\textbf{Exercice 3 \ \ Approximation de la loi Binomiale par ...}
+La loi Binomial $\mathcal{B}(n, p)$ peut-être approchée lorsque $n \to \infty$ par la loi de Poisson ou par la noi
+normale en fonction des valeurs de $p$.
+\begin{enumerate}
+    \item Approximation par la loi normale lorsque $p$ est fixé et $n \to \infty$.
+    \begin{itemize}
+        \item [(a)] Ecrire une fonction \texttt{approx\_bin\_normale} qui prend pour arguments les paramètres $n$ et $p$ et qui
+        renvoie sur la même figure, le diagramme en bâton de la loi $\mathcal{B}(n, p)$ et la densité de la loi $\mathcal{N}(np, np(1 - p))$.
+    \end{itemize}
+\end{enumerate}
+```{R, echo = "FALSE"}
+library(pracma)
+```
+```{R}
+# Approximation of the binomial distribution with size n and probability of success p
+# by a normal distribution
+approx_bin_normale <- function(n, p) {
+
+    mu  <- n * p
+    sig <- sqrt(n * p * (1 - p))
+
+    # We want the values from 0 to n
+    # x <- linspace(0, n) #
+    k <- seq(0, n)
+    # x <- linspace(0, n, 1000)
+    x <- k
+
+    pdf.norm <- dnorm(x, mean = mu,  sd = sig)
+    pdf.bin  <- dbinom(x = k, size = n, prob = p)
+
+    # names(pdf.bin) <- k
+
+    # df.bar <- barplot(pdf.bin)
+    # lines(x = df.bar, pdf.norm)
+    # points(pdf.norm)
+
+    # df.bin <- tibble(k, pdf = pdf.bin)
+    # df.norm <- tibble(x, pdf = pdf.norm)
+
+
+    # plt <- df.bin |> ggplot(aes(k, pdf.bin)) + geom_col()
+    # print(length(df.norm$x))
+    # plt + geom_line(aes(data = df.norm, x, pdf.norm))
+    # p <- df.norm |> ggplot(aes(x, pdf)) + geom_line()
+    # p + geom_col(aes(x = df.bin$k, y = df.bin$pdf))
+}
+
+```
