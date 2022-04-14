@@ -1,0 +1,145 @@
+---
+title: "TP2 Theorèmes limites"
+author: Evan Voyles
+date: 15 Avril, 2022
+output:
+    pdf_document:
+        highlight: "zenburn"
+        fig_width: 4
+        fig_height: 3
+
+---
+
+```{R, echo=FALSE}
+library(tibble)
+library(ggplot2)
+library(tidyverse)
+set.seed(1234) # For reproducible results
+```
+
+<!-- # Exercice 1 Loi d'une variable aléatoire discrète -->
+$\textbf{Exercice 1 \ \ Illustration de la LFGN.}\\$
+\begin{enumerate}
+    \item Simuler un échantillon de taille 1000 de variables aléatoires $X_i$ de loi exponentielle de paramètre 2.
+\end{enumerate}
+
+```{R}
+rate <- 2; n <- 1000
+
+x <- rexp(n, rate)
+```
+
+\begin{itemize}
+    \item[2.] En déduire les moyennes empiriques $\bar X_n = \frac{1}{n}\sum^n_{i = 1} X_i$ pour $n = 1, \dots, 1000.$
+\end{itemize}
+
+```{R}
+moyenne_empiriques <- cumsum(x) / seq(n)
+```
+\begin{itemize}
+    \item[3.] Tracer une trajectoire de la moyenne empirique, i.e $n \mapsto \bar X_n$ pour $n = 1, \dots, 1000.$ Superposer la droite
+    d'équation $y = 1/2$ (utiliser la fonction \texttt{abline}). D'où vient 1/2?
+\end{itemize}
+```{R, echo = FALSE}
+draw_traj <- function(f_sim, n_trials, n_traj, title = NULL, subtitle = NULL) {
+
+    df <- tibble(n = seq(n_trials))
+
+    for (i in seq(n_traj)) {
+        sim <- f_sim(n_trials) # Call the simulation function, like rnorm(n, 0, 1)
+        cum_avg <- cumsum(sim) / seq(n_trials)
+        df <- df |> add_column(cum_avg, .name_repair = c("unique"))
+    }
+
+    df.long <- pivot_longer(df,
+                            cols = !c(1), # Pivot everything BUT the first column
+                            names_to = "data",
+                            values_to = "traj")
+
+    df.long |>
+        ggplot(aes(n, traj, group = data)) +
+        geom_line(aes(col = data, alpha = 1), size = 0.4) +
+        theme(legend.position = "none") +
+        labs(x = "n", y = "trajectoires", title = title, subtitle = subtitle) +
+        geom_hline(yintercept = 0.5)
+
+}
+```
+
+
+```{R, fig.align = "center"}
+df <- tibble(n = seq(n), y = moyenne_empiriques)
+df |> ggplot(aes(n, y)) + geom_line() + geom_hline(yintercept = 0.5, col = "red")
+```
+1/2 est l'espérance de notre loi exponentielle ($\frac{1}{\lambda}$)
+
+\begin{itemize}
+    \item[4.] Superposer 20 autres trajectoires de la moyenne empirique.
+\end{itemize}
+
+```{R, results = "hide", fig.align = "center", message = FALSE}
+sim <- function(n) { rexp(n, 2) }
+# draw_traj est une fonction montrée en fin de document
+draw_traj(sim,
+          n_trials = 1000,
+          n_traj = 20,
+          title = "Loi exponentielle avec lambda := 2",
+          subtitle = "20 Trajectoires des moyennes empiriques")
+```
+Tous les trajectoires tendent vers 0.5
+
+\begin{itemize}
+    \item[5.] Reprendre les mêmes questions pour une loi de Cauchy. Que remarque-t-on?
+\end{itemize}
+
+```{R, fig.align = "center"}
+loc   <- 5
+scale <- 10
+n     <- 1000
+
+cauch <- rcauchy(n, loc, scale)
+moyenne_empiriques <- cumsum(cauch) / seq(n)
+
+df.cauchy <- tibble(n = seq(n), y = moyenne_empiriques)
+df.cauchy |> ggplot(aes(n, y)) + geom_line()
+```
+
+On suppose que lorsque $n \to \infty$, les moyennes empiriques tendront vers la "location" (endroit) de la loi de Cauchy.
+
+```{R, results = "hide", fig.align = "center", message = FALSE}
+sim <- function(n) { rcauchy(n, loc, scale) }
+draw_traj(sim,
+          n_trials = 1000,
+          n_traj = 20,
+          "Loi de Cauchy avec loc := 5, scale := 10",
+          "20 Trajectoires des moyennes empiriques")
+```
+
+On observe la même tendance que les moyennes empiriques tendent vers l'endroit (5 dans ce cas). Cependant, on remarque que - grace au fait
+que la loi de Cauchy a des "queues" (tail) qui sont rélativement fort par rapport à des autres lois comme la loi normale, par exemple. Donc,
+il est possible de tomber sur une quantité dont la valeur absolue est extrêment large. C'est pour cela qu'on peut observer des pics.
+
+$\textbf{Exercice 2 \ \ Loi d'une variable aléatoire discrète.}\\$
+\begin{enumerate}
+    \item Illustrer la LFGN lorsque les $X_i$ sont i.i.d de loi de Bernouille $\mathcal{B}(p)$ avec $p = 0.5$
+\end{enumerate}
+
+```{R, fig.align = "center"}
+n <- 1000
+p <- 0.5
+
+bern <- rbinom(n, size = 1, prob = p)
+moyenne_empiriques <- cumsum(bern) / seq(n)
+
+df.bern <- tibble(n = seq(n), y = moyenne_empiriques)
+df.bern |> ggplot(aes(n, y)) + geom_line()
+```
+
+```{R, results = "hide", fig.align = "center", message = FALSE}
+sim <- function(n) { rbinom(n, size = 1, prob = p) }
+draw_traj(sim,
+          n_trials = 1000,
+          n_traj = 20,
+          title = "Loi Bernouilli avec p := 0.5",
+          subtitle = "Trajectoires des moyennes empiriques")
+```
