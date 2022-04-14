@@ -10,7 +10,7 @@ output:
 
 ---
 
-```{R, echo=FALSE}
+```{R, message = FALSE}
 library(tibble)
 library(ggplot2)
 library(tidyverse)
@@ -64,6 +64,30 @@ draw_traj <- function(f_sim, n_trials, n_traj, title = NULL, subtitle = NULL) {
         geom_hline(yintercept = 0.5)
 
 }
+
+draw_traj_moins_p <- function(f_sim, n_trials, n_traj, p = 0.5, title = NULL, subtitle = NULL) {
+
+    df <- tibble(n = seq(n_trials))
+
+    for (i in seq(n_traj)) {
+        sim <- f_sim(n_trials) # Call the simulation function, like rnorm(n, 0, 1)
+        cum_avg <- cumsum(sim) / seq(n_trials)
+        df <- df |> add_column(cum_avg - p, .name_repair = c("unique"))
+    }
+
+    df.long <- pivot_longer(df,
+                            cols = !c(1), # Pivot everything BUT the first column
+                            names_to = "data",
+                            values_to = "traj")
+
+    df.long |>
+        ggplot(aes(n, traj, group = data)) +
+        geom_line(aes(col = data, alpha = 1), size = 0.4) +
+        theme(legend.position = "none") +
+        labs(x = "n", y = "trajectoires", title = title, subtitle = subtitle) +
+        geom_hline(yintercept = 0)
+
+}
 ```
 
 
@@ -79,7 +103,7 @@ df |> ggplot(aes(n, y)) + geom_line() + geom_hline(yintercept = 0.5, col = "red"
 
 ```{R, results = "hide", fig.align = "center", message = FALSE}
 sim <- function(n) { rexp(n, 2) }
-# draw_traj est une fonction montrée en fin de document
+# draw_traj est une fonction que j'ai définie, montrée en fin de document
 draw_traj(sim,
           n_trials = 1000,
           n_traj = 20,
@@ -116,8 +140,9 @@ draw_traj(sim,
 ```
 
 On observe la même tendance que les moyennes empiriques tendent vers l'endroit (5 dans ce cas). Cependant, on remarque que - grace au fait
-que la loi de Cauchy a des "queues" (tail) qui sont rélativement fort par rapport à des autres lois comme la loi normale, par exemple. Donc,
-il est possible de tomber sur une quantité dont la valeur absolue est extrêment large. C'est pour cela qu'on peut observer des pics.
+que la loi de Cauchy a des "queues" (tail) qui sont rélativement fort par rapport à des autres lois comme la loi normale - il est possible de tomber
+sur une quantité dont la valeur absolue est extrêment large. C'est pour cela qu'on peut observer des pics la ou la moyenne a été influencé par une valeur
+rélativement grande.
 
 $\textbf{Exercice 2 \ \ Loi d'une variable aléatoire discrète.}\\$
 \begin{enumerate}
@@ -143,3 +168,57 @@ draw_traj(sim,
           title = "Loi Bernouilli avec p := 0.5",
           subtitle = "Trajectoires des moyennes empiriques")
 ```
+
+\begin{itemize}
+    \item[2.] On s'intéresse maintenant à l'écart entre $\bar X_n$ et $p$ pour étudier la vitesse de convergence.
+\end{itemize}
+\begin{itemize}
+    \item[(a)] Représenter 10 trajectoires de $\bar X_n - p$.
+\end{itemize}
+
+```{R, message = FALSE, fig.align = "center"}
+p <- 0.5
+
+sim <- function(n) { rbinom(n, size = 1, prob = p) }
+draw_traj_moins_p(sim, 1000, 10, p, "Loi Bernouilli avec p := 0.5",
+                                    "10 Trajectoires des moyennes empiriques moins p")
+```
+
+\begin{itemize}
+    \item[(b)] Superposer en rouge les courbes $n \mapsto 1.96\frac{\sqrt{p(1 - p)}}{\sqrt{n}}$ et $n \mapsto -1.96\frac{\sqrt{p(1 - p)}}{\sqrt{n}}$. A quoi
+    correspond 1.96 et que signifie t'il?
+\end{itemize}
+
+La valeur de 1.96 correspond à la valeur pour un intervalle de confiance de 95%. Très imprécisement, on suppose que 95% des moyennes empiriques seront
+entre les bornes de ces deux fonctions. On remarque que $\sqrt{p(1 - q)}$ est l'écart type d'une loi normale approximant une loi de Bernouilli.
+```{R, message = FALSE, fig.align = "center"}
+p <- 0.5
+sqrt_pq_95 <- 1.96 * sqrt(p * (1 - p))
+n <- 1000
+
+fn_b <- function(n) { sqrt_pq_95 / sqrt(n) }
+fn_c <- function(n) { sqrt_pq_95 / n }
+fn_d <- function(n) { sqrt_pq_95 / log(n) }
+
+draw_traj_moins_p(sim, n, 10, p) +
+    geom_line(aes(x = n, y = fn_b(n)), col = "red", size = 0.25) +
+    geom_line(aes(x = n, y = -fn_b(n)), col = "red", size = 0.25)
+```
+
+\begin{itemize}
+    \item[(c)] Superposer en rouge les courbes $n \mapsto 1.96\frac{\sqrt{p(1 - p)}}{n}$ et $n \mapsto -1.96\frac{\sqrt{p(1 - p)}}{n}$.
+\end{itemize}
+
+```{R, message = FALSE, fig.align = "center"}
+draw_traj_moins_p(sim, n, 10, p) +
+    geom_line(aes(x = n, y = fn_c(n)), col = "green", size = 0.25) +
+    geom_line(aes(x = n, y = -fn_c(n)), col = "green", size = 0.25)
+```
+
+```{R, message = FALSE, fig.align = "center"}
+draw_traj_moins_p(sim, n, 10, p) +
+    geom_line(aes(x = n, y = fn_d(n)), col = "blue", size = 0.25) +
+    geom_line(aes(x = n, y = -fn_d(n)), col = "blue", size = 0.25)
+```
+
+$\textbf{Exercice 3 \ \ Illustration de la convergence en loi donnée par le TCL.}\\$
