@@ -222,3 +222,54 @@ draw_traj_moins_p(sim, n, 10, p) +
 ```
 
 $\textbf{Exercice 3 \ \ Illustration de la convergence en loi donnée par le TCL.}\\$
+
+\begin{enumerate}
+    \item Ecrire une fonction \texttt{tclexpo} qui prend pour arguments $n$ et le paramètre $a$ de la loi exponentielle.
+    Cette fonction simule 1000 vecteurs ($X_1, \dots, X_n$) où $X_i$ suit une loi exponentielle de paramètre $a$ et calculer
+    pour chacun de ces vecteurs : $$\sqrt{n} \frac{ \frac{1}{n} \sum_{i = 1}^n X_i - \mathbb{E}(X_1) }{ \sqrt{\mathrm{var}(X_1)} }$$
+
+\end{enumerate}
+
+```{R}
+tclexpo <- function(n, a) {
+
+    X1 <- rexp(n, a)
+    mu <- mean(X1)
+    sqv <- sqrt(var(X1))
+    sqn <- sqrt(n)
+    coeff <- force(sqn / (n * sqv)) # Calculate once, use 1000 times
+
+    stat_Xi <- function(Xi) {
+        coeff * sum(Xi - mu)
+    }
+
+    # Let's create a list so that we can easily map over it with lapply
+    my_list <- list(X1)
+
+    for (i in seq(999)) {
+       my_list[[i + 1]] <- rexp(n, a)
+    }
+
+    unlist(lapply(my_list, stat_Xi)) # return a vector
+}
+```
+
+```{R, fig.align = "center"}
+a <- 2
+n <- c(2, 10, 50, 100)
+
+out <- map(n, tclexpo, a) # Map tclexpo(n = ?, a) over the values of n
+
+# Now I have a list of length 4 whose elements are vectors with size 1000.
+df <- tibble(n2 = out[[1]], n10 = out[[2]], n50 = out[[3]], n100 = out[[4]])
+df <- df |> pivot_longer(everything(), names_to = "names", values_to = "values")
+# df$names <- factor(df$names, levels = "n10", "n2", "n50", "n100")
+
+
+df |>
+    ggplot(aes(values)) +
+    geom_histogram(breaks = seq(-4, 4, 0.2)) +
+    geom_line(aes(values, 200 * dnorm(values)), col = "red") +
+    facet_wrap(~ names)
+
+```
