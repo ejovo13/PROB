@@ -10,6 +10,8 @@ output:
 
 ---
 
+Le code source pour ce document est disponible [ici](https://github.com/ejovo13/PROB/blob/main/TP/tp2.rmd)
+
 ```{R, message = FALSE}
 library(tibble)
 library(ggplot2)
@@ -157,7 +159,7 @@ bern <- rbinom(n, size = 1, prob = p)
 moyenne_empiriques <- cumsum(bern) / seq(n)
 
 df.bern <- tibble(n = seq(n), y = moyenne_empiriques)
-df.bern |> ggplot(aes(n, y)) + geom_line()
+df.bern |> ggplot(aes(n, y)) + geom_line() + geom_hline(yintercept = 0.5, col = "red")
 ```
 
 ```{R, results = "hide", fig.align = "center", message = FALSE}
@@ -202,24 +204,31 @@ fn_d <- function(n) { sqrt_pq_95 / log(n) }
 
 draw_traj_moins_p(sim, n, 10, p) +
     geom_line(aes(x = n, y = fn_b(n)), col = "red", size = 0.25) +
-    geom_line(aes(x = n, y = -fn_b(n)), col = "red", size = 0.25)
+    geom_line(aes(x = n, y = -fn_b(n)), col = "red", size = 0.25) +
+    labs(title = "Loi Bernouilli avec p := 5", subtitle = "Comparaison avec c / sqrt(n)")
 ```
 
 \begin{itemize}
-    \item[(c)] Superposer en rouge les courbes $n \mapsto 1.96\frac{\sqrt{p(1 - p)}}{n}$ et $n \mapsto -1.96\frac{\sqrt{p(1 - p)}}{n}$.
+    \item[(c)] Superposer en vert les courbes $n \mapsto 1.96\frac{\sqrt{p(1 - p)}}{n}$ et $n \mapsto -1.96\frac{\sqrt{p(1 - p)}}{n}$.
 \end{itemize}
 
 ```{R, message = FALSE, fig.align = "center"}
 draw_traj_moins_p(sim, n, 10, p) +
     geom_line(aes(x = n, y = fn_c(n)), col = "green", size = 0.25) +
-    geom_line(aes(x = n, y = -fn_c(n)), col = "green", size = 0.25)
+    geom_line(aes(x = n, y = -fn_c(n)), col = "green", size = 0.25) +
+    labs(title = "Loi Bernouilli avec p := 5", subtitle = "Comparaison avec c / n")
 ```
 
 ```{R, message = FALSE, fig.align = "center"}
 draw_traj_moins_p(sim, n, 10, p) +
     geom_line(aes(x = n, y = fn_d(n)), col = "blue", size = 0.25) +
-    geom_line(aes(x = n, y = -fn_d(n)), col = "blue", size = 0.25)
+    geom_line(aes(x = n, y = -fn_d(n)), col = "blue", size = 0.25) +
+    labs(title = "Loi Bernouilli avec p := 5", subtitle = "Comparaison avec c / log(n)")
 ```
+
+Il est évident que la vitesse de $\frac{1}{n}$ est trop rapide, et que la vitesse de $\frac{1}{\log(n)}$ est trop lente. La vitesse de $\frac{1}{\sqrt{n}}$, par contre,
+n'est ni trop serrée, ni trop lâche.
+
 
 $\textbf{Exercice 3 \ \ Illustration de la convergence en loi donnée par le TCL.}\\$
 
@@ -254,7 +263,12 @@ tclexpo <- function(n, a) {
 }
 ```
 
-```{R, fig.align = "center"}
+\begin{itemize}
+    \item[2.] Appliquer la fonction \texttt{tclexpo} pour $a = 2$ et $n \in \{2, 10, 50, 100\}$. Pour chaque valeur
+\end{itemize}
+
+
+```{R, fig.align = "center", message = FALSE}
 a <- 2
 n <- c(2, 10, 50, 100)
 
@@ -267,9 +281,112 @@ df <- df |> pivot_longer(everything(), names_to = "names", values_to = "values")
 
 
 df |>
-    ggplot(aes(values)) +
-    geom_histogram(breaks = seq(-4, 4, 0.2)) +
-    geom_line(aes(values, 200 * dnorm(values)), col = "red") +
-    facet_wrap(~ names)
+    ggplot(aes(values, after_stat(density))) +
+    geom_histogram() +
+    geom_line(aes(values, dnorm(values)), col = "red") +
+    facet_wrap(~ names) +
+    labs(y = "fréquence")
 
+```
+Etonnamment, pour $n = 50$ on a une loi qui suit la loi normale la plus loyalement.
+
+$\textbf{Exercice 4 \ \ Illustration de l'inégalité de Tchebychev et de la LfGN}\\$
+
+A faire.
+
+$\textbf{Exercice 5 \ \ Illustration du théorème de Glivenko-Cantelli}\\$
+Soit $X = (X_1, \dots, X_n)$ un vecteur de $n$ variables aléatoires i.i.d de fonction
+de répartition $F$. On définit la fonction de répartition empirique par $$ F_n(t) = \frac{1}{n}\sum_{i = 1}^n \textbf{1}_{X_i \leq t}\ \ \ \forall t$$
+
+```{R}
+Fempirique <- function(X) {
+
+    # First let's sort X
+    X <- sort(X)
+    n <- length(X)
+
+    Fn_t <- function(t) {
+        sum(X <= t) / n
+    }
+
+    # Then apply our function, returning a numeric vector
+    right_column <- purrr::map_dbl(X, Fn_t)
+
+    matrix(c(X, right_column), ncol = 2)
+}
+
+```
+
+```{R, eval=F}
+n <- 10 ** c(1, 2, 3, 4)
+
+# first generate samples, then apply Fempirique to the samples
+out <- lapply(map(n, runif), Fempirique) # Length 4 List
+
+par(mfrow = c(2, 2))
+
+for (i in seq(4)) {
+    this_mat <- out[[i]]
+    plot(this_mat[,1],
+         this_mat[,2],
+         xlab = paste("n =", n[i]),
+         ylab = "F_n(t)")
+    # title(xlab = paste(n[i]))
+}
+```
+<!-- <img src="plot.png" alt="drawing" width="200"/> -->
+\newpage
+![Fonction de répartition empirique pour une loi uniforme](./plot.png)
+
+
+$\textbf{Appendice}\\$
+Ici les deux fonctions qui sont utilisées en haut (executé dans une cellule cachée).
+```{R}
+draw_traj <- function(f_sim, n_trials, n_traj, title = NULL, subtitle = NULL) {
+
+    df <- tibble(n = seq(n_trials))
+
+    for (i in seq(n_traj)) {
+        sim <- f_sim(n_trials) # Call the simulation function, like rnorm(n, 0, 1)
+        cum_avg <- cumsum(sim) / seq(n_trials)
+        df <- df |> add_column(cum_avg, .name_repair = c("unique"))
+    }
+
+    df.long <- pivot_longer(df,
+                            cols = !c(1), # Pivot everything BUT the first column
+                            names_to = "data",
+                            values_to = "traj")
+
+    df.long |>
+        ggplot(aes(n, traj, group = data)) +
+        geom_line(aes(col = data, alpha = 1), size = 0.4) +
+        theme(legend.position = "none") +
+        labs(x = "n", y = "trajectoires", title = title, subtitle = subtitle) +
+        geom_hline(yintercept = 0.5)
+
+}
+
+draw_traj_moins_p <- function(f_sim, n_trials, n_traj, p = 0.5, title = NULL, subtitle = NULL) {
+
+    df <- tibble(n = seq(n_trials))
+
+    for (i in seq(n_traj)) {
+        sim <- f_sim(n_trials) # Call the simulation function, like rnorm(n, 0, 1)
+        cum_avg <- cumsum(sim) / seq(n_trials)
+        df <- df |> add_column(cum_avg - p, .name_repair = c("unique"))
+    }
+
+    df.long <- pivot_longer(df,
+                            cols = !c(1), # Pivot everything BUT the first column
+                            names_to = "data",
+                            values_to = "traj")
+
+    df.long |>
+        ggplot(aes(n, traj, group = data)) +
+        geom_line(aes(col = data, alpha = 1), size = 0.4) +
+        theme(legend.position = "none") +
+        labs(x = "n", y = "trajectoires", title = title, subtitle = subtitle) +
+        geom_hline(yintercept = 0)
+
+}
 ```
